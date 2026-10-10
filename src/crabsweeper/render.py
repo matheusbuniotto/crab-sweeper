@@ -44,6 +44,13 @@ def verdict(review: Review) -> str:
     return "changes requested" if _blocked(review) else "looks ready"
 
 
+def labels_for(review: Review) -> tuple[str, ...]:
+    """The model's labels, with any `status:` replaced by one derived from the verdict."""
+    kept = [label for label in review.ai.labels if not label.strip().lower().startswith("status:")]
+    status = "status: needs-fix" if _blocked(review) else "status: ready"
+    return (*kept, status)
+
+
 def _blocked(review: Review) -> bool:
     failed = any(check.blocking and not check.ok for check in review.checks)
     severe = any(finding.priority in SEVERE for finding in review.ai.findings)

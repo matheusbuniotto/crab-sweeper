@@ -83,7 +83,7 @@ async def test_a_review_posts_one_comment_and_applies_labels() -> None:
     assert comment_id == "1"
     assert len(github.comments) == 1
     assert MARKER in github.comments[0]
-    assert github.labels == [("P2",)]
+    assert github.labels == [("P2", "status: ready")]
 
 
 async def test_an_unconfigured_provider_skips_the_model_but_still_posts() -> None:

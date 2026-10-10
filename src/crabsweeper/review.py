@@ -10,7 +10,7 @@ from crabsweeper import ai as ai_module
 from crabsweeper.checks import run_checks
 from crabsweeper.config import Provider, Settings
 from crabsweeper.models import AiReview, Check, PullRequest, Review, ReviewRequest
-from crabsweeper.render import render
+from crabsweeper.render import labels_for, render
 
 logger = logging.getLogger("crabsweeper")
 
@@ -40,11 +40,14 @@ async def run_review(
     pull = await github.pull(request.installation_id, request.repo, request.number)
     checks = run_checks(pull)
     ai = await _ai(settings, pull, checks, reviewer)
-    body = render(Review(request=request, pull=pull, checks=checks, ai=ai))
+    review = Review(request=request, pull=pull, checks=checks, ai=ai)
+    body = render(review)
     comment_id = await github.upsert_comment(
         request.installation_id, request.repo, request.number, body
     )
-    await github.add_labels(request.installation_id, request.repo, request.number, ai.labels)
+    await github.add_labels(
+        request.installation_id, request.repo, request.number, labels_for(review)
+    )
     return comment_id
 
 

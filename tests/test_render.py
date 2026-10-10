@@ -1,7 +1,7 @@
 """The review comment mirrors the maintainer format."""
 
 from crabsweeper.models import AiReview, Check, Finding, PullRequest, Review, ReviewRequest
-from crabsweeper.render import MARKER, render, verdict
+from crabsweeper.render import MARKER, labels_for, render, verdict
 
 
 def _review(
@@ -9,6 +9,7 @@ def _review(
     checks: tuple[Check, ...] = (),
     findings: tuple[Finding, ...] = (),
     before_merge: tuple[str, ...] = (),
+    labels: tuple[str, ...] = ("P2",),
     suggestion: str | None = None,
 ) -> Review:
     ai = AiReview(
@@ -18,7 +19,7 @@ def _review(
         readiness="Clear value, one routing defect remains.",
         findings=findings,
         before_merge=before_merge,
-        labels=("P2",),
+        labels=labels,
         suggestion=suggestion,
     )
     pull = PullRequest(
@@ -64,3 +65,10 @@ def test_a_clean_review_looks_ready() -> None:
 def test_the_suggested_fix_is_rendered() -> None:
     review = _review(suggestion="```suggestion\nx = 1\n```")
     assert "## Suggested fix" in render(review)
+
+
+def test_the_status_label_is_derived_from_the_verdict() -> None:
+    model_said = _review(labels=("P2", "status: needs-fix"), findings=(Finding("P2", "x", "y"),))
+    assert labels_for(model_said) == ("P2", "status: ready")
+    blocked = _review(labels=("status: ready",), checks=(Check("secrets", False, "s", True),))
+    assert labels_for(blocked) == ("status: needs-fix",)
