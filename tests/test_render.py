@@ -1,7 +1,7 @@
 """The review comment mirrors the maintainer format."""
 
 from crabsweeper.models import AiReview, Check, Finding, PullRequest, Review, ReviewRequest
-from crabsweeper.render import MARKER, labels_for, render, verdict
+from crabsweeper.render import MARKER, labels_for, render, render_in_progress, verdict
 
 
 def _review(
@@ -72,3 +72,11 @@ def test_the_status_label_is_derived_from_the_verdict() -> None:
     assert labels_for(model_said) == ("P2", "status: ready")
     blocked = _review(labels=("status: ready",), checks=(Check("secrets", False, "s", True),))
     assert labels_for(blocked) == ("status: needs-fix",)
+
+
+def test_render_in_progress_contains_marker_and_status() -> None:
+    req = ReviewRequest(1, "repo", 1, "abc123456789", "opened")
+    text = render_in_progress(req)
+    assert MARKER in text
+    assert "in progress" in text
+    assert "Crab picked this to work and review" in text

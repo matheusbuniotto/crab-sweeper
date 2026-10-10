@@ -47,11 +47,17 @@ class _FakeGitHub:
         self._pull = pull
         self.comments: list[str] = []
         self.labels: list[tuple[str, ...]] = []
+        self.history: list[str] = []
 
     async def pull(self, installation_id: int, repo: str, number: int) -> PullRequest:
         return self._pull
 
     async def upsert_comment(self, installation_id: int, repo: str, number: int, body: str) -> str:
+        self.history.append(body)
+        for idx, existing in enumerate(self.comments):
+            if MARKER in existing:
+                self.comments[idx] = body
+                return "1"
         self.comments.append(body)
         return "1"
 
@@ -82,6 +88,8 @@ async def test_a_review_posts_one_comment_and_applies_labels() -> None:
     comment_id = await run_review(_settings(configured=True), github, _request(), reviewer=reviewer)
     assert comment_id == "1"
     assert len(github.comments) == 1
+    assert len(github.history) == 2
+    assert "in progress" in github.history[0]
     assert MARKER in github.comments[0]
     assert github.labels == [("P2", "status: ready")]
 

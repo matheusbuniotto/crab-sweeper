@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from crabsweeper.models import AiReview, Check, FileChange, Finding, Review
+from crabsweeper.models import AiReview, Check, FileChange, Finding, Review, ReviewRequest
 
 MARKER = "<!-- crabsweeper-review -->"
 SEVERE = frozenset({"P0", "P1"})
@@ -15,6 +15,23 @@ CRAB_RANKS: dict[int, tuple[str, str, str]] = {
     2: ("🦪 silver shellfish", "D", "Proof or implementation needs work"),
     1: ("🧂 unranked krab", "F", "Not merge-ready"),
 }
+
+
+def render_in_progress(request: ReviewRequest) -> str:
+    head_sha = request.head_sha or "unknown"
+    sha_short = head_sha[:12] if len(head_sha) >= 12 else head_sha
+    lines = [
+        MARKER,
+        f"CrabSweeper review: in progress. _Reviewed head `{sha_short}`._",
+        "",
+        "# CrabSweeper review",
+        "",
+        "🦀 **Crab picked this to work and review...**",
+        "",
+        "Gathering diff, running deterministic checks, and preparing the AI review."
+        " This comment will update automatically once complete.",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def render(review: Review) -> str:

@@ -10,7 +10,7 @@ from crabsweeper import ai as ai_module
 from crabsweeper.checks import run_checks
 from crabsweeper.config import Provider, Settings
 from crabsweeper.models import AiReview, Check, PullRequest, Review, ReviewRequest
-from crabsweeper.render import labels_for, render
+from crabsweeper.render import labels_for, render, render_in_progress
 
 logger = logging.getLogger("crabsweeper")
 
@@ -37,6 +37,12 @@ async def run_review(
     reviewer: Reviewer = ai_module.review,
 ) -> str:
     """Read the PR, run both halves, and post one updated comment plus labels."""
+    await github.upsert_comment(
+        request.installation_id,
+        request.repo,
+        request.number,
+        render_in_progress(request),
+    )
     pull = await github.pull(request.installation_id, request.repo, request.number)
     checks = run_checks(pull)
     ai = await _ai(settings, pull, checks, reviewer)
