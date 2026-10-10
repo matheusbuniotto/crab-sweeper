@@ -1,0 +1,86 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crabsweeper"
+version = "0.1.0"
+description = "Deterministic + AI pull-request reviewer, packaged as a portable GitHub App"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "httpx>=0.28.0",
+    "pyjwt[crypto]>=2.9.0",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pyright>=1.1.395",
+    "ruff>=0.9.9",
+    "vulture>=2.14",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crabsweeper"]
+
+# ==============================================================================
+# RUFF
+# ==============================================================================
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = [
+    "F", "E", "W", "I", "UP", "B", "BLE", "A", "C4", "C90", "T10", "T20",
+    "SIM", "RET", "ARG", "ERA", "PLR", "PLW", "PLE", "PLC", "TRY", "RUF",
+]
+ignore = ["PLR2004", "TRY003", "PLC0415"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 9
+
+[tool.ruff.lint.pylint]
+max-branches = 8
+max-statements = 35
+max-args = 6
+max-returns = 6
+max-nested-blocks = 3
+max-locals = 12
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["ARG", "PLR0915"]
+
+# ==============================================================================
+# PYTEST
+# ==============================================================================
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+# ==============================================================================
+# PYRIGHT
+# ==============================================================================
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "standard"
+reportMissingImports = true
+reportUnusedImport = false
+reportUnusedVariable = false
+
+# ==============================================================================
+# VULTURE
+# ==============================================================================
+[tool.vulture]
+paths = ["src"]
+min_confidence = 80
+ignore_names = ["*__", "test_*"]
