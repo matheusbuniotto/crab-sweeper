@@ -27,8 +27,17 @@ def render(review: Review) -> str:
     ]
     if review.ai.suggestion:
         lines += ["", "## Suggested fix", "", review.ai.suggestion]
-    lines += ["", f"_Reviewed head `{review.request.head_sha or 'unknown'}`._"]
+    lines += ["", _footer(review)]
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _footer(review: Review) -> str:
+    parts = [f"_Reviewed head `{review.request.head_sha or 'unknown'}`"]
+    if review.ai.model:
+        parts.append(f"model `{review.ai.model}`")
+    if review.ai.cost_usd is not None:
+        parts.append(f"cost ${review.ai.cost_usd:.4f}")
+    return " · ".join(parts) + "._"
 
 
 def verdict(review: Review) -> str:

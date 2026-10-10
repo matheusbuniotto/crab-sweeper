@@ -33,3 +33,24 @@ def test_a_missing_key_leaves_the_provider_unconfigured() -> None:
 def test_the_private_key_accepts_escaped_newlines() -> None:
     settings = settings_from_env({"GITHUB_PRIVATE_KEY": "line1\\nline2"})
     assert settings.private_key == "line1\nline2"
+
+
+def test_small_diffs_use_the_cheap_model() -> None:
+    provider = provider_from_env(
+        {
+            "CRABSWEEPER_LLM_PROVIDER": "opencode",
+            "LLM_BASE_URL": "https://gateway.example/v1",
+            "LLM_API_KEY": "k",
+            "LLM_MODEL_SMALL": "free/auto",
+            "LLM_MODEL_LARGE": "gpt-6-luna",
+            "LLM_SIZE_THRESHOLD": "100",
+        }
+    )
+    assert provider.route.choose(50, provider.model) == "free/auto"
+    assert provider.route.choose(500, provider.model) == "gpt-6-luna"
+
+
+def test_the_per_run_budget_is_configurable() -> None:
+    provider = provider_from_env({"OPENROUTER_API_KEY": "k", "CRABSWEEPER_MAX_COST_USD": "0.10"})
+    assert provider.budget.max_usd == 0.10
+    assert provider.budget.max_output_tokens == 1200

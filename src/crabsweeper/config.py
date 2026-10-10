@@ -4,20 +4,48 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 DEFAULT_MODEL = "openai/gpt-4o-mini"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MENTION = "@crabsweeper"
+DEFAULT_MAX_COST_USD = 0.10
+DEFAULT_MAX_OUTPUT_TOKENS = 1200
+DEFAULT_SIZE_THRESHOLD = 400
+
+
+@dataclass(frozen=True, slots=True)
+class Route:
+    """Pick a model by diff size: cheap/free for small, stronger for large."""
+
+    small_model: str = ""
+    large_model: str = ""
+    threshold: int = DEFAULT_SIZE_THRESHOLD
+
+    def choose(self, changed_lines: int, fallback: str) -> str:
+        if changed_lines <= self.threshold:
+            return self.small_model or fallback
+        return self.large_model or fallback
+
+
+@dataclass(frozen=True, slots=True)
+class Budget:
+    """A per-run ceiling: output tokens bound cost; `max_usd` caps the price."""
+
+    max_usd: float = DEFAULT_MAX_COST_USD
+    max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS
 
 
 @dataclass(frozen=True, slots=True)
 class Provider:
-    """An OpenAI-compatible chat endpoint (OpenRouter, opencode-go, ...)."""
+    """An OpenAI-compatible chat endpoint (OpenRouter, opencode, ...)."""
 
     base_url: str
     api_key: str
-    model: str
+    model: str = ""
+    route: Route = field(default_factory=Route)
+    budget: Budget = field(default_factory=Budget)
+    max_price: bool = False
 
     @property
     def configured(self) -> bool:
@@ -50,18 +78,35 @@ def settings_from_env(env: Mapping[str, str]) -> Settings:
 
 
 def provider_from_env(env: Mapping[str, str]) -> Provider:
-    """`openrouter` has defaults; every other gateway is fully env-driven."""
-    if env.get("CRABSWEEPER_LLM_PROVIDER", "openrouter").lower() == "openrouter":
-        return Provider(
-            base_url=env.get("LLM_BASE_URL") or OPENROUTER_BASE_URL,
-            api_key=env.get("LLM_API_KEY") or env.get("OPENROUTER_API_KEY", ""),
-            model=env.get("LLM_MODEL") or DEFAULT_MODEL,
-        )
+    """`openrouter` has defaults; `opencode` and others are fully env-driven."""
+    kind = env.get("CRABSWEEPER_LLM_PROVIDER", "openrouter").lower()
     return Provider(
-        base_url=env.get("LLM_BASE_URL", ""),
-        api_key=env.get("LLM_API_KEY", ""),
-        model=env.get("LLM_MODEL", ""),
+        base_url=env.get("LLM_BASE_URL") or (OPENROUTER_BASE_URL if kind == "openrouter" else ""),
+        api_key=env.get("LLM_API_KEY") or env.get("OPENROUTER_API_KEY", ""),
+        model=_model(env, kind),
+        route=Route(
+            small_model=env.get("LLM_MODEL_SMALL", ""),
+            large_model=env.get("LLM_MODEL_LARGE", ""),
+            threshold=int(env.get("LLM_SIZE_THRESHOLD", str(DEFAULT_SIZE_THRESHOLD))),
+        ),
+        budget=Budget(
+            max_usd=float(env.get("CRABSWEEPER_MAX_COST_USD", str(DEFAULT_MAX_COST_USD))),
+            max_output_tokens=int(env.get("LLM_MAX_OUTPUT_TOKENS", str(DEFAULT_MAX_OUTPUT_TOKENS))),
+        ),
+        max_price=_enabled(env.get("CRABSWEEPER_ENFORCE_MAX_PRICE")),
     )
+
+
+def _enabled(value: str | None) -> bool:
+    return (value or "").lower() in {"1", "true", "yes"}
+
+
+def _model(env: Mapping[str, str], kind: str) -> str:
+    explicit = env.get("LLM_MODEL")
+    if explicit:
+        return explicit
+    fallback = env.get("LLM_MODEL_LARGE") or env.get("LLM_MODEL_SMALL") or ""
+    return fallback or (DEFAULT_MODEL if kind == "openrouter" else "")
 
 
 def _private_key(env: Mapping[str, str]) -> str:

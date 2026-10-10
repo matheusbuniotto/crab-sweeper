@@ -77,6 +77,8 @@ class AiReview:
     before_merge: tuple[str, ...]
     labels: tuple[str, ...]
     suggestion: str | None = None
+    model: str = ""
+    cost_usd: float | None = None
 
 
 @dataclass(frozen=True, slots=True)

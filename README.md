@@ -31,10 +31,32 @@ Any OpenAI-compatible chat endpoint works. Two presets:
 | `CRABSWEEPER_LLM_PROVIDER` | Base URL | Key env |
 |---|---|---|
 | `openrouter` (default) | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` or `LLM_API_KEY` |
-| `opencode` (or any other) | `LLM_BASE_URL` | `LLM_API_KEY` |
+| `opencode` (the opencode router, or any other gateway) | `LLM_BASE_URL` | `LLM_API_KEY` |
 
 Set `LLM_MODEL` to override the model. With no key the app still posts the deterministic
 review and notes that the AI half is unavailable.
+
+### Route by diff size
+
+Pick a cheap/free model for small diffs and a stronger one for large ones:
+
+```bash
+LLM_MODEL_SMALL=auto          # free model or auto-router
+LLM_MODEL_LARGE=gpt-6-luna    # stronger model
+LLM_SIZE_THRESHOLD=400        # changed lines
+```
+
+### Per-run budget
+
+```bash
+CRABSWEEPER_MAX_COST_USD=0.10   # the ceiling you want per run
+LLM_MAX_OUTPUT_TOKENS=1200      # hard bound on output
+CRABSWEEPER_ENFORCE_MAX_PRICE=true   # also send OpenRouter's per-request price cap
+```
+
+Output tokens and diff size are hard-bounded; the actual `usage.cost` returned by the
+gateway is shown in the comment footer (`cost $0.0021`). The USD ceiling is best-effort:
+without per-token prices a pre-flight estimate cannot be exact.
 
 ## Configuration
 
@@ -55,15 +77,17 @@ uv sync --dev
 uv run uvicorn crabsweeper.app:app --reload --port 8000
 ```
 
-Expose the webhook while developing:
+Expose the webhook while developing. GitHub's **Webhook URL** must be public HTTPS, so point
+it at a smee channel and relay that channel to `/webhook`:
 
 ```bash
 npx smee-client --url https://smee.io/<your-channel> --target http://localhost:8000/webhook
 ```
 
-Then create a GitHub App (Settings → Developer settings → GitHub Apps) pointing its webhook
-URL at the smee channel, subscribe to **Pull request** and **Issue comment** events, and
-install it on a repository.
+Set the App's **Webhook URL** to `https://smee.io/<your-channel>`, its **Webhook secret** to
+the same value as `GITHUB_WEBHOOK_SECRET`, content type `application/json`, and subscribe to
+**Pull request** + **Issue comment**. Then install the App on a repository. When hosted, the
+Webhook URL is simply `https://your-host/webhook`.
 
 ## Deploy anywhere
 
