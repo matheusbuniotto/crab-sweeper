@@ -72,22 +72,15 @@ without per-token prices a pre-flight estimate cannot be exact.
 ## Run locally
 
 ```bash
-cp .env.example .env          # fill in the four GITHUB_* values and one provider
+cp .env.example .env          # fill in GITHUB_*, SMEE_URL, and one provider
 uv sync --dev
-uv run uvicorn crabsweeper.app:app --reload --port 8000
+./scripts/dev.sh              # starts the smee relay and the app together
 ```
 
-Expose the webhook while developing. GitHub's **Webhook URL** must be public HTTPS, so point
-it at a smee channel and relay that channel to `/webhook`:
-
-```bash
-npx smee-client --url https://smee.io/<your-channel> --target http://localhost:8000/webhook
-```
-
-Set the App's **Webhook URL** to `https://smee.io/<your-channel>`, its **Webhook secret** to
-the same value as `GITHUB_WEBHOOK_SECRET`, content type `application/json`, and subscribe to
-**Pull request** + **Issue comment**. Then install the App on a repository. When hosted, the
-Webhook URL is simply `https://your-host/webhook`.
+GitHub's **Webhook URL** must be public HTTPS, so set it to your smee channel
+(`https://smee.io/<channel>`, the same value as `SMEE_URL`). When hosted, it is simply
+`https://your-host/webhook`. See [docs/github-app.md](docs/github-app.md) for the exact App
+fields: permissions, events, and SSL verification.
 
 ## Deploy anywhere
 
