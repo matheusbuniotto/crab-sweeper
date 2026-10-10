@@ -77,3 +77,9 @@ def test_a_garbage_reply_degrades_to_a_summary() -> None:
     review = parse_review("the model rambled")
     assert review.findings == ()
     assert review.summary == "the model rambled"
+
+
+def test_an_empty_reply_degrades_with_a_clear_note() -> None:
+    review = parse_review("", model="openai/gpt-6-luna")
+    assert review.findings == ()
+    assert "no output" in review.summary

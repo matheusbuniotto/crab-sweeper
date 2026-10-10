@@ -46,6 +46,7 @@ class Provider:
     route: Route = field(default_factory=Route)
     budget: Budget = field(default_factory=Budget)
     max_price: bool = False
+    reasoning_effort: str = ""
 
     @property
     def configured(self) -> bool:
@@ -94,7 +95,15 @@ def provider_from_env(env: Mapping[str, str]) -> Provider:
             max_output_tokens=int(env.get("LLM_MAX_OUTPUT_TOKENS", str(DEFAULT_MAX_OUTPUT_TOKENS))),
         ),
         max_price=_enabled(env.get("CRABSWEEPER_ENFORCE_MAX_PRICE")),
+        reasoning_effort=_reasoning_effort(env, kind),
     )
+
+
+def _reasoning_effort(env: Mapping[str, str], kind: str) -> str:
+    """Reasoning models burn the token budget thinking; keep it low by default."""
+    if "LLM_REASONING_EFFORT" in env:
+        return env["LLM_REASONING_EFFORT"]
+    return "low" if kind == "openrouter" else ""
 
 
 def _enabled(value: str | None) -> bool:

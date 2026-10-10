@@ -37,6 +37,15 @@ class GitHub:
     async def aclose(self) -> None:
         await self._client.aclose()
 
+    async def installation_id(self, repo: str) -> int:
+        """The installation covering `repo`. For tools and dry runs; webhooks carry it."""
+        response = await self._client.get(
+            f"/repos/{repo}/installation",
+            headers={"Authorization": f"Bearer {self._jwt()}", "Accept": ACCEPT},
+        )
+        response.raise_for_status()
+        return int(response.json()["id"])
+
     async def pull(self, installation_id: int, repo: str, number: int) -> PullRequest:
         headers = await self._auth(installation_id)
         pull = await self._get(f"/repos/{repo}/pulls/{number}", headers)

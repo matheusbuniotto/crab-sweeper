@@ -47,13 +47,20 @@ async def review(provider: Provider, pull: PullRequest, checks: Sequence[Check])
     }
     if provider.max_price:
         payload["provider"] = {"max_price": {"request": provider.budget.max_usd}}
+    if provider.reasoning_effort:
+        payload["reasoning"] = {"effort": provider.reasoning_effort}
     headers = {"Authorization": f"Bearer {provider.api_key}", "Content-Type": "application/json"}
     async with httpx.AsyncClient(base_url=provider.base_url, timeout=TIMEOUT_SECONDS) as client:
         response = await client.post("/chat/completions", headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
-    content = data["choices"][0]["message"]["content"]
-    return parse_review(str(content), model=model, cost_usd=_cost(data))
+    choice = (data.get("choices") or [{}])[0]
+    content = (choice.get("message") or {}).get("content")
+    return parse_review(
+        content if isinstance(content, str) else "",
+        model=model,
+        cost_usd=_cost(data),
+    )
 
 
 def choose_model(provider: Provider, pull: PullRequest) -> str:
@@ -140,11 +147,14 @@ def _finding(item: object) -> Finding:
 
 
 def _fallback(content: str, model: str, cost_usd: float | None) -> AiReview:
+    summary = content.strip()[:280] or (
+        "The model returned no output — it likely spent the token budget on reasoning."
+    )
     return AiReview(
-        summary=content.strip()[:280] or "The model returned no review.",
+        summary=summary,
         kind="Change",
         worth_it=True,
-        readiness="AI reply was not structured JSON.",
+        readiness="AI review could not be parsed.",
         findings=(),
         before_merge=(),
         labels=(),

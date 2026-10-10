@@ -51,8 +51,13 @@ LLM_SIZE_THRESHOLD=400        # changed lines
 ```bash
 CRABSWEEPER_MAX_COST_USD=0.10   # the ceiling you want per run
 LLM_MAX_OUTPUT_TOKENS=1200      # hard bound on output
+LLM_REASONING_EFFORT=low        # reasoning models default to low on OpenRouter
 CRABSWEEPER_ENFORCE_MAX_PRICE=true   # also send OpenRouter's per-request price cap
 ```
+
+Reasoning models (like `openai/gpt-6-luna`) spend the token budget on hidden reasoning before
+emitting content; on a large diff they can return an empty reply. `LLM_REASONING_EFFORT=low`
+keeps that in check (set it empty to disable the field entirely).
 
 Output tokens and diff size are hard-bounded; the actual `usage.cost` returned by the
 gateway is shown in the comment footer (`cost $0.0021`). The USD ceiling is best-effort:

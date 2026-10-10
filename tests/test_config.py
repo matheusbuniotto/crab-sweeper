@@ -54,3 +54,14 @@ def test_the_per_run_budget_is_configurable() -> None:
     provider = provider_from_env({"OPENROUTER_API_KEY": "k", "CRABSWEEPER_MAX_COST_USD": "0.10"})
     assert provider.budget.max_usd == 0.10
     assert provider.budget.max_output_tokens == 1200
+
+
+def test_openrouter_defaults_to_low_reasoning_effort() -> None:
+    assert provider_from_env({"OPENROUTER_API_KEY": "k"}).reasoning_effort == "low"
+
+
+def test_reasoning_effort_can_be_overridden_or_disabled() -> None:
+    overridden = provider_from_env({"OPENROUTER_API_KEY": "k", "LLM_REASONING_EFFORT": "high"})
+    disabled = provider_from_env({"OPENROUTER_API_KEY": "k", "LLM_REASONING_EFFORT": ""})
+    assert overridden.reasoning_effort == "high"
+    assert disabled.reasoning_effort == ""
