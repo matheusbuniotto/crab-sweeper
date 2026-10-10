@@ -77,6 +77,9 @@ class AiReview:
     before_merge: tuple[str, ...]
     labels: tuple[str, ...]
     suggestion: str | None = None
+    diagram: str | None = None
+    technical_review: str | None = None
+    rank_score: int | None = None
     model: str = ""
     cost_usd: float | None = None
 

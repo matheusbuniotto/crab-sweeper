@@ -14,14 +14,17 @@ from crabsweeper.models import AiReview, Check, Finding, PullRequest
 TIMEOUT_SECONDS = 90.0
 MAX_DIFF_CHARS = 24000
 
-SYSTEM_PROMPT = """You are CrabSweeper, a concise senior code reviewer.
-Review the pull request for correctness, scope, and merge risk.
+SYSTEM_PROMPT = """You are CrabSweeper, a senior code reviewer.
+Review the pull request for correctness, scope, architecture, and merge risk.
 Return ONLY a JSON object with this shape:
 {
   "summary": "one or two sentences on what this changes",
   "kind": "Feature | Fix | Refactor | Docs | Chore",
   "worth_it": true,
-  "readiness": "one sentence verdict",
+  "readiness": "one or two sentences on readiness / maintainer verdict",
+  "rank_score": 4, // 1: unranked krab, 2: shellfish, 3: shrimp, 4: hermit, 5: lobster, 6: crab
+  "technical_review": "concise technical assessment: approach, reproducibility, architecture",
+  "diagram": "a clean mermaid flowchart LR showing data flow or architecture, or null",
   "findings": [
     {"priority": "P0|P1|P2|P3", "title": "...", "detail": "...", "file": null, "line": 0}
   ],
@@ -91,6 +94,23 @@ def parse_review(content: str, *, model: str = "", cost_usd: float | None = None
         return _fallback(content, model, cost_usd)
     if not isinstance(data, dict):
         return _fallback(content, model, cost_usd)
+    rank_score = data.get("rank_score")
+    rank_score_val = (
+        max(1, min(6, int(rank_score))) if isinstance(rank_score, (int, float)) else None
+    )
+
+    diagram = data.get("diagram")
+    diagram_val = (
+        _strip_fence(str(diagram).strip()) if isinstance(diagram, str) and diagram.strip() else None
+    )
+
+    technical_review = data.get("technical_review")
+    tech_val = (
+        str(technical_review).strip()
+        if isinstance(technical_review, str) and technical_review.strip()
+        else None
+    )
+
     return AiReview(
         summary=str(data.get("summary") or ""),
         kind=str(data.get("kind") or "Change"),
@@ -100,6 +120,9 @@ def parse_review(content: str, *, model: str = "", cost_usd: float | None = None
         before_merge=tuple(str(item) for item in _items(data.get("before_merge"))),
         labels=tuple(str(item) for item in _items(data.get("labels"))),
         suggestion=data.get("suggestion") or None,
+        diagram=diagram_val,
+        technical_review=tech_val,
+        rank_score=rank_score_val,
         model=model,
         cost_usd=cost_usd,
     )

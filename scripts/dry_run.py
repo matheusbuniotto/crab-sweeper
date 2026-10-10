@@ -18,7 +18,20 @@ from crabsweeper.models import Review, ReviewRequest
 from crabsweeper.render import render
 
 
+def _load_env(path: str = ".env") -> None:
+    if not os.path.isfile(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            k, v = stripped.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+
+
 async def main(repo: str, number: int) -> None:
+    _load_env()
     settings = settings_from_env(os.environ)
     github = GitHub(app_id=settings.app_id, private_key=settings.private_key)
     try:
